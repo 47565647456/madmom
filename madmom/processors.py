@@ -54,17 +54,37 @@ class Processor(object):
 
         """
         import pickle
+        import io
         from .io import open_file
+
+        # custom Unpickler to handle Python 2/3 incompatibilities and \r
+        class Unpickler(pickle.Unpickler):
+            def find_class(self, module, name):
+                # strip carriage returns from module and class names
+                module = module.replace('\r', '')
+                name = name.replace('\r', '')
+                # handle Python 2/3 renamed modules
+                if module == 'copy_reg':
+                    module = 'copyreg'
+                return super(Unpickler, self).find_class(module, name)
+
         # instantiate a new Processor and return it
         with open_file(infile, 'rb') as f:
-            # Python 2 and 3 behave differently
+            data = f.read()
+
+        # Python 2 and 3 behave differently
+        try:
+            # Python 3
             try:
-                # Python 3
-                obj = pickle.load(f, encoding='latin1')
-            except TypeError:
-                # Python 2 doesn't have/need the encoding
-                obj = pickle.load(f)
-        return obj
+                # try loading normally
+                return Unpickler(io.BytesIO(data), encoding='latin1').load()
+            except Exception:
+                # try fixing corrupted line endings
+                fixed_data = data.replace(b'\r\n', b'\n')
+                return Unpickler(io.BytesIO(fixed_data), encoding='latin1').load()
+        except TypeError:
+            # Python 2 doesn't have/need the encoding
+            return pickle.load(io.BytesIO(data))
 
     def dump(self, outfile):
         """

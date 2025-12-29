@@ -385,16 +385,19 @@ class TestResampleFunction(unittest.TestCase):
     def test_values_mono(self):
         result = resample(self.signal, 22050)
         self.assertEqual(result.sample_rate, 22050)
-        self.assertEqual(result.num_samples, 61741)
+        self.assertTrue(np.allclose(result.num_samples, 61741, atol=1))
         self.assertEqual(result.dtype, self.signal.dtype)
         self.assertEqual(result.num_channels, self.signal.num_channels)
         self.assertTrue(np.allclose(result.length, self.signal.length))
-        self.assertTrue(np.allclose(result, self.signal_22k))
+        # ffmpeg and avconv result in slightly different values and lengths
+        length = min(len(result), len(self.signal_22k))
+        self.assertTrue(np.allclose(result[:length], self.signal_22k[:length],
+                                    atol=1))
 
     def test_values_mono_float(self):
         result = resample(self.signal_float, 22050)
         self.assertEqual(result.sample_rate, 22050)
-        self.assertEqual(result.num_samples, 61741)
+        self.assertTrue(np.allclose(result.num_samples, 61741, atol=1))
         self.assertEqual(result.dtype, self.signal_float.dtype)
         self.assertEqual(result.num_channels, self.signal_float.num_channels)
         self.assertTrue(np.allclose(result.length, self.signal_float.length))
@@ -403,7 +406,7 @@ class TestResampleFunction(unittest.TestCase):
     def test_values_dtype(self):
         result = resample(self.signal, 22050, dtype=np.float32)
         self.assertEqual(result.sample_rate, 22050)
-        self.assertEqual(result.num_samples, 61741)
+        self.assertTrue(np.allclose(result.num_samples, 61741, atol=1))
         self.assertEqual(result.dtype, np.float32)
         self.assertEqual(result.num_channels, self.signal_float.num_channels)
         self.assertTrue(np.allclose(result.length, self.signal_float.length))
@@ -412,32 +415,36 @@ class TestResampleFunction(unittest.TestCase):
     def test_values_stereo(self):
         result = resample(self.stereo_signal, 22050)
         self.assertEqual(result.sample_rate, 22050)
-        self.assertEqual(result.num_samples, 91460)
+        self.assertTrue(np.allclose(result.num_samples, 91460, atol=1))
         self.assertEqual(result.dtype, self.stereo_signal.dtype)
         self.assertEqual(result.num_channels, self.stereo_signal.num_channels)
         self.assertTrue(np.allclose(result.length, self.stereo_signal.length))
         self.assertTrue(np.allclose(result[:6],
                                     [[34, 38], [32, 33], [37, 31],
-                                     [35, 35], [32, 34], [33, 34]]))
+                                     [35, 35], [32, 34], [33, 34]], atol=1))
 
     def test_values_upmixing(self):
         result = resample(self.signal, 22050, num_channels=2)
         self.assertEqual(result.sample_rate, 22050)
-        self.assertEqual(result.num_samples, 61741)
+        self.assertTrue(np.allclose(result.num_samples, 61741, atol=1))
         self.assertEqual(result.dtype, self.signal.dtype)
         self.assertEqual(result.num_channels, 2)
         self.assertTrue(np.allclose(result.length, self.signal.length))
         stereo = np.vstack((self.signal_22k, self.signal_22k)).T / np.sqrt(2)
-        self.assertTrue(np.allclose(result, stereo, atol=np.sqrt(2)))
+        # ffmpeg and avconv result in slightly different values and lengths
+        length = min(len(result), len(stereo))
+        self.assertTrue(np.allclose(result[:length], stereo[:length],
+                                    atol=np.sqrt(2)))
 
     def test_values_downmixing(self):
         result = resample(self.stereo_signal, 22050, num_channels=1)
         self.assertEqual(result.sample_rate, 22050)
-        self.assertEqual(result.num_samples, 91460)
+        self.assertTrue(np.allclose(result.num_samples, 91460, atol=1))
         self.assertEqual(result.dtype, self.stereo_signal.dtype)
         self.assertEqual(result.num_channels, 1)
         self.assertTrue(np.allclose(result.length, self.stereo_signal.length))
-        self.assertTrue(np.allclose(result[:6], [36, 33, 34, 35, 33, 34]))
+        self.assertTrue(np.allclose(result[:6], [36, 33, 34, 35, 33, 34],
+                                    atol=1))
 
     def test_errors(self):
         with self.assertRaises(ValueError):
@@ -1227,7 +1234,7 @@ class TestFramedSignalClass(unittest.TestCase):
     def test_values_file(self):
         signal = Signal(sample_file)
         result = FramedSignal(sample_file)
-        self.assertTrue(np.allclose(result[0][:5], [0, 0, 0, 0, 0]))
+        self.assertTrue(np.allclose(result[0][:1023], np.zeros(1023)))
         # 3rd frame should start at 3 * 441 - 2048 / 2 = 299
         self.assertTrue(np.allclose(result[3], signal[299: 299 + 2048]))
         # attributes

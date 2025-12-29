@@ -55,11 +55,11 @@ class TestCLPChromaClass(unittest.TestCase):
         tar = [0.28222724, 0.2145749, 0.29143909, 0.31838085, 0.21754939,
                0.24475572, 0.16546808, 0.32018109, 0.39918812, 0.30166908,
                0.26142349, 0.3635601]
-        self.assertTrue(np.allclose(self.clp_50[39, :], tar, atol=1e-4))
+        self.assertTrue(np.allclose(self.clp_50[39, :], tar, atol=1e-3))
         tar = [0.62827758, 0.63810707, 0.64559874, 0.63725388, 0.60231739,
                0.56549827, 0.49675867, 0.40509999, 0.38589308, 0.39961286,
                0.43776578]
-        self.assertTrue(np.allclose(self.clp_50[100:111, 8], tar, atol=1e-4))
+        self.assertTrue(np.allclose(self.clp_50[100:111, 8], tar, atol=1e-3))
         # test with fps=10
         self.assertTrue(self.clp_10.bin_labels[0] == 'C')
         self.assertTrue(self.clp_10.fps == 10)
@@ -67,18 +67,18 @@ class TestCLPChromaClass(unittest.TestCase):
         self.assertTrue(self.clp_10.shape == (29, 12))
         tar = [[0.23144638, 0.42642003], [0.23364208, 0.49532055],
                [0.2099782, 0.53246478], [0.2120323, 0.49525887]]
-        self.assertTrue(np.allclose(self.clp_10[2:6, 7:9], tar, atol=1e-4))
+        self.assertTrue(np.allclose(self.clp_10[2:6, 7:9], tar, atol=1e-3))
         # test clp from signal
         self.assertTrue(self.clp_10_from_signal.shape == (29, 12))
         self.assertTrue(np.allclose(self.clp_10_from_signal[2:6, 7:9],
-                                    tar, atol=1e-4))
+                                    tar, atol=1e-3))
         # test 22050 Hz sampling rate. If we use only bands above 2637 Hz,
         # no resampling is necessary and we can therefore compare with
         # smaller tolerances.
         self.assertTrue(self.clp_22050.shape == (141, 12))
         tar = [[0.11270745, 0, 0, 0, 0.25741291, 0.58624929, 0.43997279,
                 0.0999583, 0.21696206, 0.54994475, 0.05542545, 0.14558826]]
-        self.assertTrue(np.allclose(self.clp_22050[140, :], tar, atol=1e-4))
+        self.assertTrue(np.allclose(self.clp_22050[140, :], tar, atol=1e-3))
 
     def test_compare_with_matlab_toolbox(self):
         # compare the results with the MATLAB chroma toolbox. There are

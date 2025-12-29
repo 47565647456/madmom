@@ -261,7 +261,7 @@ class DBNDownBeatTrackingProcessor(Processor):
             and downbeats given in the first and second column, respectively.
 
         Returns
-        -------
+-------
         beats : numpy array, shape (num_beats, 2)
             Detected (down-)beat positions [seconds] and beat numbers.
 
@@ -371,7 +371,7 @@ class DBNDownBeatTrackingProcessor(Processor):
             (down-)beat activation function).
 
         Returns
-        -------
+-------
         parser_group : argparse argument group
             DBN downbeat tracking argument parser group
 
@@ -464,7 +464,7 @@ class PatternTrackingProcessor(Processor):
         Frames per second.
 
     Notes
-    -----
+-----
     `min_bpm`, `max_bpm`, `num_tempo_states`, and `transition_lambda` must
     contain as many items as rhythmic patterns are modeled (i.e. length of
     `pattern_files`).
@@ -533,6 +533,7 @@ SpectrogramDifferenceProcessor, MultiBandSpectrogramProcessor
         # pylint: disable=unused-argument
         # pylint: disable=no-name-in-module
         import pickle
+        import io
         min_bpm = np.array(min_bpm, ndmin=1)
         max_bpm = np.array(max_bpm, ndmin=1)
         num_tempi = np.array(num_tempi, ndmin=1)
@@ -566,16 +567,35 @@ SpectrogramDifferenceProcessor, MultiBandSpectrogramProcessor
         # check that at least one pattern is given
         if not pattern_files:
             raise ValueError('at least one rhythmical pattern must be given.')
+
+        # custom Unpickler to handle Python 2/3 incompatibilities and \r
+        class Unpickler(pickle.Unpickler):
+            def find_class(self, module, name):
+                # strip carriage returns from module and class names
+                module = module.replace('\r', '')
+                name = name.replace('\r', '')
+                # handle Python 2/3 renamed modules
+                if module == 'copy_reg':
+                    module = 'copyreg'
+                return super(Unpickler, self).find_class(module, name)
+
         # load the patterns
         for p, pattern_file in enumerate(pattern_files):
             with open(pattern_file, 'rb') as f:
-                # Python 2 and 3 behave differently
+                data = f.read()
+            # Python 2 and 3 behave differently
+            try:
+                # Python 3
                 try:
-                    # Python 3
-                    pattern = pickle.load(f, encoding='latin1')
-                except TypeError:
-                    # Python 2 doesn't have/need the encoding
-                    pattern = pickle.load(f)
+                    # try loading normally
+                    pattern = Unpickler(io.BytesIO(data), encoding='latin1').load()
+                except Exception:
+                    # try fixing corrupted line endings
+                    fixed_data = data.replace(b'\r\n', b'\n')
+                    pattern = Unpickler(io.BytesIO(fixed_data), encoding='latin1').load()
+            except TypeError:
+                # Python 2 doesn't have/need the encoding
+                pattern = pickle.load(io.BytesIO(data))
             # get the fitted GMMs and number of beats
             gmms.append(pattern['gmms'])
             num_beats = pattern['num_beats']
@@ -604,7 +624,7 @@ SpectrogramDifferenceProcessor, MultiBandSpectrogramProcessor
             Multi-band spectral features.
 
         Returns
-        -------
+-------
         beats : numpy array, shape (num_beats, 2)
             Detected (down-)beat positions [seconds] and beat numbers.
 
@@ -651,12 +671,12 @@ SpectrogramDifferenceProcessor, MultiBandSpectrogramProcessor
             values prefer constant tempi from one beat to the next one).
 
         Returns
-        -------
+-------
         parser_group : argparse argument group
             Pattern tracking argument parser group
 
         Notes
-        -----
+-----
         `pattern_files`, `min_bpm`, `max_bpm`, `num_tempi`, and
         `transition_lambda` must have the same number of items.
 
@@ -737,7 +757,7 @@ class LoadBeatsProcessor(Processor):
         or file.
 
         Returns
-        -------
+-------
         beats : numpy array
             Beat positions [seconds].
 
@@ -759,12 +779,12 @@ class LoadBeatsProcessor(Processor):
             Input file name.
 
         Returns
-        -------
+-------
         beats : numpy array
             Beat positions [seconds].
 
         Notes
-        -----
+-----
         Both the file names to search for the beats as well as the suffix to
         determine the beat files must be given at instantiation time.
 
@@ -803,7 +823,7 @@ class LoadBeatsProcessor(Processor):
             Suffix of beat files ('batch' mode)
 
         Returns
-        -------
+-------
         argparse argument group
             Beat loading argument parser group.
 
@@ -857,7 +877,7 @@ class SyncronizeFeaturesProcessor(Processor):
             synchronized and second the beat times.
 
         Returns
-        -------
+-------
         numpy array (num beats - 1, beat subdivisions, features dim.)
             Beat synchronous features.
 
@@ -1002,14 +1022,14 @@ class RNNBarProcessor(Processor):
             times [seconds].
 
         Returns
-        -------
+-------
         numpy array, shape (num_beats, 2)
             Array containing the beat positions (first column) and the
             corresponding downbeat activations, i.e. the probability that a
             beat is a downbeat (second column).
 
         Notes
-        -----
+-----
         Since features are synchronized to the beats, and the probability of
         being a downbeat depends on a whole beat duration, only num_beats-1
         activations can be computed and the last value is filled with 'NaN'.
@@ -1123,12 +1143,12 @@ class DBNBarTrackingProcessor(Processor):
             downbeat activations (second column).
 
         Returns
-        -------
+-------
         numpy array, shape (num_beats, 2)
             Decoded (down-)beat positions and beat numbers.
 
         Notes
-        -----
+-----
         The position of the last beat is not decoded, but rather extrapolated
         based on the position and meter of the second to last beat.
 
@@ -1173,7 +1193,7 @@ class DBNBarTrackingProcessor(Processor):
             Probability to change meter at bar boundaries.
 
         Returns
-        -------
+-------
         parser_group : argparse argument group
             DBN bar tracking argument parser group
 
